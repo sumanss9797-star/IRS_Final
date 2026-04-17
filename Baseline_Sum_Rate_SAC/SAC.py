@@ -317,4 +317,4 @@ class SAC(object):
 
         self.critic.load_state_dict(torch.load(filename + "_critic"))
         self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
-        self.critic_target = hard_update.deepcopy(self.critic)
+        self.critic_target = copy.deepcopy(self.critic)

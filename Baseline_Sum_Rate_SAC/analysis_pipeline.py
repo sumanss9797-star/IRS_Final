@@ -104,6 +104,8 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
     
     max_reward = 0
     max_mismatch_reward = 0
+    best_action = None
+    best_beta = None
     time_logs = []
 
     print(f"Starting Training for L={L}, K={K}, Steps={max_time_steps} on {device}...")
@@ -118,6 +120,8 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
             max_reward = reward
         if mismatch_reward > max_mismatch_reward:
             max_mismatch_reward = mismatch_reward
+            best_action = action
+            best_beta = beta
             
         if (t + 1) % 100 == 0:
             time_logs.append({
@@ -141,14 +145,14 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
         # Linear schedule
         exp_regularization = 0.3 - (0.3 * (t / max_time_steps))
         
-        # Save last few best or simply last step
-        # Here we just take the last step as an approximation for final metrics
-        if t == max_time_steps - 1:
-            final_rates = ind_rates
-            final_sum_rate = mismatch_reward
+    # --- INFERENCE PHASE: PHYSICAL ACTION CHECKPOINTING ---
+    if best_action is not None:
+        next_state, reward, done, info = env.step(best_action, best_beta)
+        final_sum_rate = info["true reward"]
+        final_rates = info.get("individual_rates", [])
 
-    # Determine outages (rate < 0.5 can be an outage, you can customize this)
-    outages = sum([1 for r in final_rates if r < 0.5])
+    # Determine outages (rate < 1.0)
+    outages = sum([1 for r in final_rates if r < 1.0])
     
     if outages == 0:
         outage_str = "0 outages!"

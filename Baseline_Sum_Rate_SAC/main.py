@@ -166,6 +166,8 @@ if __name__ == "__main__":
 
     max_reward = 0
     max_mismatch_reward = 0
+    best_action = None
+    best_beta = None
 
     episode_time_steps = 0
     episode_num = 0
@@ -202,6 +204,8 @@ if __name__ == "__main__":
 
         if mismatch_reward > max_mismatch_reward:
             max_mismatch_reward = mismatch_reward
+            best_action = action
+            best_beta = beta if "Beta_Space" in args.policy else None
 
         reward = reward - np.mean(instant_rewards)
 
@@ -214,7 +218,10 @@ if __name__ == "__main__":
         state = next_state
 
         if (t + 1) % 100 == 0:
-            print(f"Time step: {t + 1} Max. Reward: {max_reward:.3f} Max. Mismatch Reward: {max_mismatch_reward:.3f}")
+            ind_rates = info.get("individual_rates", [])
+            outages = sum([1 for r in ind_rates if r < 1.0])
+            rates_str = " | ".join([f"U{i+1}: {r:.2f}" for i, r in enumerate(ind_rates)])
+            print(f"Time step: {t + 1} Max. Reward: {max_reward:.3f} Max. Mismatch Reward: {max_mismatch_reward:.3f} | {rates_str} | Outages: {outages}")
 
             np.save(f"./Results/{save_path}/{file_name}", instant_mismatch_rewards)
 
@@ -229,3 +236,19 @@ if __name__ == "__main__":
 
         if args.linear_schedule_exp_regularization:
             exp_regularization = args.exp_regularization_term - (args.exp_regularization_term * (t / args.max_time_steps))
+            
+    print("\n--- INFERENCE PHASE: PHYSICAL ACTION CHECKPOINTING ---")
+    if best_action is not None:
+        if "Beta_Space" in args.policy:
+            next_state, reward, done, info = env.step(best_action, best_beta)
+        else:
+            next_state, reward, done, info = env.step(best_action)
+            
+        mismatch_reward = info["true reward"]
+        ind_rates = info.get("individual_rates", [])
+        outages = sum([1 for r in ind_rates if r < 1.0])
+        rates_str = " | ".join([f"U{i+1}: {r:.2f}" for i, r in enumerate(ind_rates)])
+        
+        print(f"Physical Checkpoint Restored! True Mismatch Reward: {mismatch_reward:.3f} | {rates_str} | Outages: {outages}")
+    else:
+        print("No best action found to restore.")
