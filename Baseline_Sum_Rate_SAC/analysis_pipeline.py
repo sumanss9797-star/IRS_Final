@@ -129,6 +129,14 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
                 "Max. Reward": round(max_reward, 3),
                 "Max. Mismatch Reward": round(max_mismatch_reward, 3)
             })
+
+        # Write live progress file every 500 steps (readable from separate Colab cell)
+        if (t + 1) % 500 == 0:
+            progress_pct = 100 * (t + 1) / max_time_steps
+            with open(f"progress_L{L}_K{K}.txt", "w") as pf:
+                pf.write(f"L={L}, K={K} | Step {t+1}/{max_time_steps} ({progress_pct:.1f}%)\n")
+                pf.write(f"Max Reward: {max_reward:.4f} | Max Mismatch Reward: {max_mismatch_reward:.4f}\n")
+                pf.flush()
             
         next_state = whiten(next_state)
         
