@@ -10,8 +10,10 @@ from stable_baselines3.common.callbacks import BaseCallback
 from torch_env import RIS_MISO_Env
 
 class PhysicalCheckpointCallback(BaseCallback):
-    def __init__(self, verbose=0):
+    def __init__(self, L=0, max_steps=1, verbose=0):
         super(PhysicalCheckpointCallback, self).__init__(verbose)
+        self.L_config = L
+        self.max_steps = max_steps
         self.max_mismatch_reward = -float('inf')
         self.best_action = None
         self.time_logs = []
@@ -30,6 +32,15 @@ class PhysicalCheckpointCallback(BaseCallback):
                 "Time step": self.num_timesteps,
                 "Max. Min-Max Reward": round(float(self.max_mismatch_reward), 3)
             })
+            
+            # Export progress silently for the Tkinter Dashboard
+            try:
+                with open(f"progress_L{self.L_config}.txt", "w") as f:
+                    progress_pct = min((self.num_timesteps / self.max_steps) * 100, 100)
+                    f.write(f"{progress_pct:.1f},{self.num_timesteps},{self.max_mismatch_reward:.3f}")
+            except:
+                pass
+                
         return True
 
 def run_experiment(L, K, M, max_time_steps, seed=0):
@@ -67,8 +78,12 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
     # Force cpu locally to avoid multiprocessing GPU lock contention natively
     model = PPO('MlpPolicy', env, policy_kwargs=policy_kwargs, ent_coef=0.01, verbose=0, device="cpu")
     
-    chkpt_callback = PhysicalCheckpointCallback()
+    chkpt_callback = PhysicalCheckpointCallback(L=L, max_steps=max_time_steps)
     model.learn(total_timesteps=max_time_steps, reset_num_timesteps=False, callback=chkpt_callback)
+    
+    # Clean up GUI progress file
+    try: os.remove(f"progress_L{L}.txt")
+    except: pass
     
     final_rates = []
     final_reward = 0.0
