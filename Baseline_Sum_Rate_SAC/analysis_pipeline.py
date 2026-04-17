@@ -111,7 +111,7 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
     print(f"Starting Training for L={L}, K={K}, Steps={max_time_steps} on {device}...")
     for t in range(max_time_steps):
         action, beta = agent.select_action(state, exp_regularization)
-        next_state, reward, done, info = env.step(action, beta)
+        next_state, reward, done, info = env.unwrapped.step(action, beta)
         
         mismatch_reward = info["true reward"]
         ind_rates = info.get("individual_rates", [])
@@ -147,7 +147,7 @@ def run_experiment(L, K, M, max_time_steps, seed=0):
         
     # --- INFERENCE PHASE: PHYSICAL ACTION CHECKPOINTING ---
     if best_action is not None:
-        next_state, reward, done, info = env.step(best_action, best_beta)
+        next_state, reward, done, info = env.unwrapped.step(best_action, best_beta)
         final_sum_rate = info["true reward"]
         final_rates = info.get("individual_rates", [])
 
