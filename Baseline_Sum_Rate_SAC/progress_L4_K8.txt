@@ -1,0 +1,2 @@
+L=4, K=8 | Step 500/10000 (5.0%)
+Max Reward: 2.9625 | Max Mismatch Reward: 2.8240
